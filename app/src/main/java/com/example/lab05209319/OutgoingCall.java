@@ -12,10 +12,13 @@ import android.widget.Toast;
 public class OutgoingCall extends BroadcastReceiver {
 
     public static String ABORT_THIS_CALL = "5554";
+    public static boolean StartBlocking = true;
     @Override
     public void onReceive(final Context context, final Intent intent) {
+        if(StartBlocking){
+            return;
+        }
         Log.d("APP", "ACTION:" + intent.getAction());
-
         if (Intent.ACTION_NEW_OUTGOING_CALL.equals(intent.getAction())) {
             String originalNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
             Log.d("APP", "outgoing,ringing:" + originalNumber);

@@ -7,13 +7,17 @@ import android.util.Log;
 import android.widget.Toast;
 
 public class StrengthOfSignalListener extends PhoneStateListener {
-    Context context;
+    private Context context;
+    public static boolean StartListening = true;
     public StrengthOfSignalListener( Context ctx){
         context = ctx;
     }
     @Override
     public void onSignalStrengthsChanged(SignalStrength signalStrength) {
         super.onSignalStrengthsChanged(signalStrength);
+        if(StartListening){
+            return;
+        }
         Log.d("APP", "Signal :" + signalStrength.toString());
         Toast.makeText(context,"Signal changed : " + signalStrength.getLevel(),Toast.LENGTH_SHORT).show();
     }

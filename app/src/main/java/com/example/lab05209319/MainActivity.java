@@ -10,14 +10,22 @@ import android.os.Bundle;
 import android.telephony.PhoneStateListener;
 import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public class MainActivity extends AppCompatActivity {
     private TelephonyManager telMgr;
     private TextView textView;
+    private TextView number;
+    private EditText textViewNrToBlock;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -25,118 +33,73 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         telMgr.listen(new StrengthOfSignalListener(this), PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
         textView = (TextView) this.findViewById(R.id.serviceID);
-        if(!isSmsReadPermissionGranted()) {
-            requestReadSmsPermission();
-        }
-        if(!isSmsRecivePermissionGranted()){
-            requestReciveSmsPermission();
-        }
-        if(!isSmsSendPermissionGranted()){
-            requestSendSmsPermission();
-        }
-        if(!isReceiveMmsPermissionGranted()){
-            requestReceiveMmsPermission();
-        }
-        if(!isReciveWapPushRecivePermissionGranted()){
-            requestReciveWapPushPermission();
-        }
-        if(!isReciveOutgoingCallProcessingPermissionGranted()){
-            requestOutgoingCallProcessingPermission();
-        }
-        if(!isReciveAnsweringCallProcessingPermissionGranted()){
-            requestAnweringCallProcessingPermission();
-        }
+        number = (TextView) this.findViewById(R.id.blockedNr);
+        textViewNrToBlock = (EditText) this.findViewById(R.id.numberToBlock);
+        number.setText("Actualy blocked nr: "+OutgoingCall.ABORT_THIS_CALL);
+        ((Button)this.findViewById(R.id.startBlocking)).setText(!OutgoingCall.StartBlocking ? "Stop Blocking Number" :"Start Blocking Number");
+        ((Button)this.findViewById(R.id.startListenignSignalStrength)).setText(StrengthOfSignalListener.StartListening ? "Start Listenign Signal Strenght":"Stop Listenign Signal Strenght" );
+        textViewNrToBlock.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable s) {}
+            @Override
+            public void beforeTextChanged(CharSequence s, int start,int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if(s.length() != 0) {
+                    number.setText("Actualy blocked nr: " + s);
+                    OutgoingCall.ABORT_THIS_CALL = s.toString();
+                }else{
+                    number.setText("Actualy blocked nr: 5554");
+                    OutgoingCall.ABORT_THIS_CALL = "5554";
+                }
+            }
+        });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        textView.setText(getTelephonyOverview(telMgr));
+    private StringBuilder telephonyOverview(TelephonyManager telMgr){
+        StringBuilder sb = new StringBuilder();
+        try {
+            sb.append("Software version : " + telMgr.getDeviceSoftwareVersion() + "\n");
+            sb.append("Linel number" + telMgr.getLine1Number() + "\n");
+            sb.append("Network Country Iso" + telMgr.getNetworkCountryIso() + "\n");
+            sb.append("Network operator " + telMgr.getNetworkOperator() + "\n");
+            sb.append("Network operator name " + telMgr.getNetworkOperatorName() + "\n");
+        } catch (SecurityException e) {
+            sb.append(e.getMessage());
+        }
+        return sb;
     }
+
     public String getTelephonyOverview(TelephonyManager telMgr) {
         StringBuilder sb = new StringBuilder();
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_PHONE_STATE)) {
-                sb.append("Permision not granted");
-            }
-            else {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.READ_PHONE_STATE}, 1);
-            }
+        if(!isReciveGranted(Manifest.permission.READ_PHONE_STATE)) {
+            requestPermission(new String[]{Manifest.permission.READ_PHONE_STATE},1);
+            sb.append("Permision not granted");
+        } else {
+            sb = telephonyOverview(telMgr);
         }
-        else{
-            try {
-                sb.append("Software version : " + telMgr.getDeviceSoftwareVersion() + "\n");
-                sb.append("Linel number" + telMgr.getLine1Number() + "\n");
-                sb.append("Network Country Iso" + telMgr.getNetworkCountryIso() + "\n");
-                sb.append("Network operator " + telMgr.getNetworkOperator() + "\n");
-                sb.append("Network operator name " + telMgr.getNetworkOperatorName() + "\n");
-            } catch (SecurityException e) {
-                sb.append(e.getMessage());
-            }
-        }
+
         return sb.toString();
     }
-    private void requestAnweringCallProcessingPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ANSWER_PHONE_CALLS)) {
+    public void requestPermission(String[] inputRequests, int RequestCode) {
+        ArrayList<String> output = new ArrayList<String>();
+        for(String request : inputRequests) {
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(this, request)) {
+                output.add(request);
+            }
         }
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ANSWER_PHONE_CALLS}, 1);
-    }
-    public boolean isReciveAnsweringCallProcessingPermissionGranted(){
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS) == PackageManager.PERMISSION_GRANTED);
-    }
-    private void requestOutgoingCallProcessingPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.PROCESS_OUTGOING_CALLS)) {
+        String[] str = new String[output.size()];
+        for (int i = 0; i < output.size() ; i++){
+            str[i] = output.get(i);
         }
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.PROCESS_OUTGOING_CALLS}, 1);
-    }
-    public boolean isReciveOutgoingCallProcessingPermissionGranted(){
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.PROCESS_OUTGOING_CALLS) == PackageManager.PERMISSION_GRANTED);
-    }
-    public boolean isReciveWapPushRecivePermissionGranted(){
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED);
-    }
-    public boolean isReceiveMmsPermissionGranted(){
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED);
-    }
+        ActivityCompat.requestPermissions(this,str, RequestCode);
 
-    public boolean isSmsRecivePermissionGranted(){
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED);
     }
-    public boolean isSmsReadPermissionGranted(){
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED);
-    }
-    public boolean isSmsSendPermissionGranted() {
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED);
-    }
-    private void requestReciveSmsPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECEIVE_SMS)) {
-        }
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECEIVE_SMS}, 1);
-    }
-    private void requestReceiveMmsPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_SMS)) {
-        }
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, 2);
-    }
-    private void requestReciveWapPushPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_SMS)) {
-        }
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, 2);
-    }
-
-    private void requestReadSmsPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_SMS)) {
-        }
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, 2);
-    }
-    private void requestSendSmsPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.SEND_SMS)) {
-        }
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, 3);
+    public boolean isReciveGranted(String request){
+        return (ContextCompat.checkSelfPermission(this,request) == PackageManager.PERMISSION_GRANTED);
     }
     public void SendMessage(View view) {
-        if(isSmsSendPermissionGranted()) {
+        if(isReciveGranted(Manifest.permission.SEND_SMS) && isReciveGranted(Manifest.permission.RECEIVE_SMS)) {
             String phone = ((EditText) this.findViewById(R.id.phoneID)).getText().toString();
             String message = ((EditText) this.findViewById(R.id.messageID)).getText().toString();
             try{
@@ -147,7 +110,39 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         else{
-            requestSendSmsPermission();
+            requestPermission(new String[]{Manifest.permission.SEND_SMS,Manifest.permission.RECEIVE_SMS},2);
+        }
+    }
+
+    public void GetInfo(View view) {
+        textView.setText(getTelephonyOverview(telMgr));
+    }
+
+    public void StartBlocking(View view) {
+        StringBuilder SystemNotifi = new StringBuilder();
+        if(isReciveGranted(Manifest.permission.PROCESS_OUTGOING_CALLS) && isReciveGranted(Manifest.permission.ANSWER_PHONE_CALLS)) {
+            OutgoingCall.StartBlocking = !OutgoingCall.StartBlocking;
+            ((Button)view).setText(OutgoingCall.StartBlocking ? "Start Blocking Number":"Stop Blocking Number");
+            return;
+        }
+        else {
+            requestPermission(new String[]{Manifest.permission.ANSWER_PHONE_CALLS,Manifest.permission.PROCESS_OUTGOING_CALLS},3);
+            SystemNotifi.append("Missing permision PROCESS_OUTGOING_CALLS \n");
+            SystemNotifi.append("Missing permision ANSWER_PHONE_CALLS \n");
+        }
+        Toast.makeText(this,SystemNotifi.toString(),Toast.LENGTH_LONG).show();
+    }
+
+    public void StartLisSignalStr(View view) {
+        StringBuilder SystemNotifi = new StringBuilder();
+        if(isReciveGranted(Manifest.permission.READ_PHONE_STATE)) {
+            StrengthOfSignalListener.StartListening = !StrengthOfSignalListener.StartListening;
+            ((Button)view).setText(StrengthOfSignalListener.StartListening ? "Start Listenign Signal Strenght":"Stop Listenign Signal Strenght" );
+        }
+        else{
+            requestPermission(new String[]{Manifest.permission.READ_PHONE_STATE},5);
+            SystemNotifi.append("Missing permision READ_PHONE_STATE \n");
+            Toast.makeText(this,SystemNotifi,Toast.LENGTH_LONG);
         }
     }
 }
